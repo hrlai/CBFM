@@ -1684,7 +1684,7 @@
 #' 
 #' @export
 #'
-#' @importFrom foreach foreach %dopar% 
+#' @importFrom foreach foreach %dopar% %do%
 #' @import Matrix 
 #' @importFrom compiler cmpfun
 #' @importFrom doParallel registerDoParallel
@@ -2296,7 +2296,7 @@ CBFM <- function(y, formula, ziformula = NULL, data,
           if(control$trace > 0)
                message("Calculating starting values...")
           
-          all_start_fits <- foreach(j = 1:num_spp) %dopar% initfit_fn(j = j, formula = formula)              
+          all_start_fits <- foreach(j = 1:num_spp) %do% initfit_fn(j = j, formula = formula)              
           start_params$betas <- do.call(rbind, lapply(all_start_fits, function(x) x$coefficients))
           start_params$betas <- start_params$betas * control$initial_betas_dampen # Should be OK even if control$initial_betas_dampen is vector equal to number of species
           gc()
@@ -2457,7 +2457,7 @@ CBFM <- function(y, formula, ziformula = NULL, data,
      formula_offset <- numeric(nrow(y))
      
      if(!exists("all_start_fits"))
-          all_start_fits <- foreach(j = 1:2) %dopar% initfit_fn(j = j, formula = formula) #' Run this a second time to get offsets (if starting values were supplied above, then all_start_fits does not exist)
+          all_start_fits <- foreach(j = 1:2) %do% initfit_fn(j = j, formula = formula) #' Run this a second time to get offsets (if starting values were supplied above, then all_start_fits does not exist)
      if(!is.null(model.offset(model.frame(all_start_fits[[1]])))) {
           formula_offset <- model.offset(model.frame(all_start_fits[[1]]))
           if(family$family %in% c("ztpoisson", "ztnegative.binomial"))
@@ -2652,7 +2652,7 @@ CBFM <- function(y, formula, ziformula = NULL, data,
                     }
                update_basiscoefsspp_cmpfn <- compiler::cmpfun(update_basiscoefsspp_fn)
                     
-               all_update_coefs <- foreach(j = 1:num_spp, .export = c("tidbits_data")) %dopar% update_basiscoefsspp_cmpfn(j = j)
+               all_update_coefs <- foreach(j = 1:num_spp, .export = c("tidbits_data")) %do% update_basiscoefsspp_cmpfn(j = j)
                for(j in 1:num_spp) {
                     new_fit_CBFM_ptest$basis_effects_mat[j,] <- all_update_coefs[[j]]$par 
                     }
@@ -2918,7 +2918,7 @@ CBFM <- function(y, formula, ziformula = NULL, data,
                     }               
                update_Xcoefsspp_cmpfn <- compiler::cmpfun(update_Xcoefsspp_fn)
                
-               all_update_coefs <- foreach(j = 1:num_spp, .export = c("new_fit_CBFM_ptest")) %dopar% update_Xcoefsspp_cmpfn(j = j)
+               all_update_coefs <- foreach(j = 1:num_spp, .export = c("new_fit_CBFM_ptest")) %do% update_Xcoefsspp_cmpfn(j = j)
                new_fit_CBFM_ptest$betas <- do.call(rbind, lapply(all_update_coefs, function(x) x$coefficients))
                new_fit_CBFM_ptest$linear_predictors <- sapply(all_update_coefs, function(x) x$linear.predictors)         
                for(j in 1:num_spp) {
@@ -3179,13 +3179,13 @@ CBFM <- function(y, formula, ziformula = NULL, data,
                                   ziX = ziX,
                                   zioffset = zioffset)
 
-          all_update_coefs <- foreach(j = 1:num_spp, .export = c("tidbits_data")) %dopar% update_basiscoefsspp_cmpfn(j = j)
+          all_update_coefs <- foreach(j = 1:num_spp, .export = c("tidbits_data")) %do% update_basiscoefsspp_cmpfn(j = j)
           for(j in 1:num_spp) {
                new_fit_CBFM_ptest$basis_effects_mat[j,] <- all_update_coefs[[j]]$par
                }
           rm(all_update_coefs)
           
-          all_update_coefs <- foreach(j = 1:num_spp, .export = c("new_fit_CBFM_ptest")) %dopar% update_Xcoefsspp_cmpfn(j = j)
+          all_update_coefs <- foreach(j = 1:num_spp, .export = c("new_fit_CBFM_ptest")) %do% update_Xcoefsspp_cmpfn(j = j)
           new_fit_CBFM_ptest$betas <- do.call(rbind, lapply(all_update_coefs, function(x) x$coefficients))
           new_fit_CBFM_ptest$linear_predictors <- sapply(all_update_coefs, function(x) x$linear.predictors)          
           for(j in 1:num_spp) {
@@ -3238,7 +3238,7 @@ CBFM <- function(y, formula, ziformula = NULL, data,
 
      all_S <- sapply(all_update_coefs, function(x) x$S)
      all_ziS <- sapply(all_update_coefs, function(x) x$ziS)
-     all_k_check <- foreach(j = 1:num_spp) %dopar% k.check(all_update_coefs[[j]]$fit, subsample = k_check_control$subsample, n.rep = k_check_control$n.rep)
+     all_k_check <- foreach(j = 1:num_spp) %do% k.check(all_update_coefs[[j]]$fit, subsample = k_check_control$subsample, n.rep = k_check_control$n.rep)
      names(all_k_check) <- colnames(y)
      if(family$family[1] %in% c("zipoisson", "zinegative.binomiak", "ztpoisson","ztnegative.binomial"))
           warning("k_check may not be terrible or not available for zero-inflated and zero-truncated distributions. Please take any results given here with a big grain of salt!")
@@ -3260,7 +3260,7 @@ CBFM <- function(y, formula, ziformula = NULL, data,
      
      
      # Calculate deviance, null deviance etc...note deviance calculation **excludes** the quadratic term in the PQL
-     nulldeviance <- foreach(j = 1:num_spp) %dopar% initfit_fn(j = j, formula = ~ 1)
+     nulldeviance <- foreach(j = 1:num_spp) %do% initfit_fn(j = j, formula = ~ 1)
      nulldeviance_perspp <- sapply(nulldeviance, function(x) -2*x$logLik)
      nulldeviance <- sum(sapply(nulldeviance, function(x) -2*x$logLik))
      rm(initfit_fn)
@@ -3571,7 +3571,7 @@ CBFM <- function(y, formula, ziformula = NULL, data,
                     return(crossprod(B*sqrt(weights_mat_betabeta[,j])) - BTWX %*% tcrossprod(XTWX_inv, BTWX))
                     }
                }
-          all_D1minusCAinvB <- foreach(j = 1:num_spp) %dopar% D1minusCAinvB_fn(j = j)
+          all_D1minusCAinvB <- foreach(j = 1:num_spp) %do% D1minusCAinvB_fn(j = j)
           all_D1minusCAinvB <- bdiag(all_D1minusCAinvB)
           if(identical(which_B_used, c(1,0,0)))
                DminusCAinvB_inv <- forceSymmetric(all_D1minusCAinvB + kronecker(.pinv(out_CBFM$G_space), .pinv(out_CBFM$Sigma_space)))
@@ -3613,7 +3613,7 @@ CBFM <- function(y, formula, ziformula = NULL, data,
                     }
                return(list(Ainv = XTWX_inv, B = XTWB))
                }
-          all_AinvandB <- foreach(j = 1:num_spp) %dopar% AinvandB_fn(j = j)
+          all_AinvandB <- foreach(j = 1:num_spp) %do% AinvandB_fn(j = j)
           
           AinvBDminusCAinvB_inv <- bdiag(lapply(all_AinvandB, function(x) x$Ainv)) %*% bdiag(lapply(all_AinvandB, function(x) x$B)) %*% DminusCAinvB_inv 
                
